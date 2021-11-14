@@ -475,7 +475,7 @@ func (p *Profile) compatible(pb *Profile) error {
 }
 
 // equalValueType returns true if the two value types are semantically
-// equal. It ignores the internal fields used during encode/decode.
+// equal. It ignores the int fields used during encode/decode.
 func equalValueType(st1, st2 *ValueType) bool {
 	return st1.Type == st2.Type && st1.Unit == st2.Unit
 }

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package driver provides an external entry point to the pprof driver.
-package driver
+// Package plugin defines the plugin implementations that the main pprof driver requires.
+package plugin
 
 import (
 	"io"
@@ -21,58 +21,27 @@ import (
 	"regexp"
 	"time"
 
-	internaldriver "github.com/codeperfio/pprof/int/driver"
-	"github.com/codeperfio/pprof/int/plugin"
 	"github.com/codeperfio/pprof/profile"
 )
 
-// PProf acquires a profile, and symbolizes it using a profile
-// manager. Then it generates a report formatted according to the
-// options selected through the flags package.
-func PProf(o *Options) error {
-	return internaldriver.PProf(o.internalOptions())
-}
-
-func (o *Options) internalOptions() *plugin.Options {
-	var obj plugin.ObjTool
-	if o.Obj != nil {
-		obj = &internalObjTool{o.Obj}
-	}
-	var sym plugin.Symbolizer
-	if o.Sym != nil {
-		sym = &internalSymbolizer{o.Sym}
-	}
-	var httpServer func(args *plugin.HTTPServerArgs) error
-	if o.HTTPServer != nil {
-		httpServer = func(args *plugin.HTTPServerArgs) error {
-			return o.HTTPServer(((*HTTPServerArgs)(args)))
-		}
-	}
-	return &plugin.Options{
-		Writer:        o.Writer,
-		Flagset:       o.Flagset,
-		Fetch:         o.Fetch,
-		Sym:           sym,
-		Obj:           obj,
-		UI:            o.UI,
-		HTTPServer:    httpServer,
-		HTTPTransport: o.HTTPTransport,
-	}
-}
-
-// HTTPServerArgs contains arguments needed by an HTTP server that
-// is exporting a pprof web interface.
-type HTTPServerArgs plugin.HTTPServerArgs
-
 // Options groups all the optional plugins into pprof.
 type Options struct {
-	Writer        Writer
-	Flagset       FlagSet
-	Fetch         Fetcher
-	Sym           Symbolizer
-	Obj           ObjTool
-	UI            UI
-	HTTPServer    func(*HTTPServerArgs) error
+	Writer  Writer
+	Flagset FlagSet
+	Fetch   Fetcher
+	Sym     Symbolizer
+	Obj     ObjTool
+	UI      UI
+
+	// HTTPServer is a function that should block serving http requests,
+	// including the handlers specified in args.  If non-nil, pprof will
+	// invoke this function if necessary to provide a web interface.
+	//
+	// If HTTPServer is nil, pprof will use its own int HTTP server.
+	//
+	// A common use for a custom HTTPServer is to provide custom
+	// authentication checks.
+	HTTPServer    func(args *HTTPServerArgs) error
 	HTTPTransport http.RoundTripper
 }
 
@@ -113,10 +82,13 @@ type FlagSet interface {
 	Parse(usage func()) []string
 }
 
-// A Fetcher reads and returns the profile named by src, using
-// the specified duration and timeout. It returns the fetched
-// profile and a string indicating a URL from where the profile
-// was fetched, which may be different than src.
+// A Fetcher reads and returns the profile named by src. src can be a
+// local file path or a URL. duration and timeout are units specified
+// by the end user, or 0 by default. duration refers to the length of
+// the profile collection, if applicable, and timeout is the amount of
+// time to wait for a profile before returning an error. Returns the
+// fetched profile, the URL of the actual source of the profile, or an
+// error.
 type Fetcher interface {
 	Fetch(src string, duration, timeout time.Duration) (*profile.Profile, string, error)
 }
@@ -156,10 +128,11 @@ type Inst struct {
 
 // An ObjFile is a single object file: a shared library or executable.
 type ObjFile interface {
-	// Name returns the underlying file name, if available.
+	// Name returns the underlyinf file name, if available
 	Name() string
 
-	// ObjAddr returns the objdump address corresponding to a runtime address.
+	// ObjAddr returns the objdump (linker) address corresponding to a runtime
+	// address, and an error.
 	ObjAddr(addr uint64) (uint64, error)
 
 	// BuildID returns the GNU build ID of the file, or an empty string.
@@ -218,7 +191,7 @@ type UI interface {
 	// interactive terminal (as opposed to being redirected to a file).
 	IsTerminal() bool
 
-	// WantBrowser indicates whether browser should be opened with the -http option.
+	// WantBrowser indicates whether a browser should be opened with the -http option.
 	WantBrowser() bool
 
 	// SetAutoComplete instructs the UI to call complete(cmd) to obtain
@@ -226,71 +199,16 @@ type UI interface {
 	SetAutoComplete(complete func(string) string)
 }
 
-// internalObjTool is a wrapper to map from the pprof external
-// interface to the int interface.
-type internalObjTool struct {
-	ObjTool
-}
+// HTTPServerArgs contains arguments needed by an HTTP server that
+// is exporting a pprof web interface.
+type HTTPServerArgs struct {
+	// Hostport contains the http server address (derived from flags).
+	Hostport string
 
-func (o *internalObjTool) Open(file string, start, limit, offset uint64) (plugin.ObjFile, error) {
-	f, err := o.ObjTool.Open(file, start, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-	return &internalObjFile{f}, err
-}
+	Host string // Host portion of Hostport
+	Port int    // Port portion of Hostport
 
-type internalObjFile struct {
-	ObjFile
-}
-
-func (f *internalObjFile) SourceLine(frame uint64) ([]plugin.Frame, error) {
-	frames, err := f.ObjFile.SourceLine(frame)
-	if err != nil {
-		return nil, err
-	}
-	var pluginFrames []plugin.Frame
-	for _, f := range frames {
-		pluginFrames = append(pluginFrames, plugin.Frame(f))
-	}
-	return pluginFrames, nil
-}
-
-func (f *internalObjFile) Symbols(r *regexp.Regexp, addr uint64) ([]*plugin.Sym, error) {
-	syms, err := f.ObjFile.Symbols(r, addr)
-	if err != nil {
-		return nil, err
-	}
-	var pluginSyms []*plugin.Sym
-	for _, s := range syms {
-		ps := plugin.Sym(*s)
-		pluginSyms = append(pluginSyms, &ps)
-	}
-	return pluginSyms, nil
-}
-
-func (o *internalObjTool) Disasm(file string, start, end uint64, intelSyntax bool) ([]plugin.Inst, error) {
-	insts, err := o.ObjTool.Disasm(file, start, end, intelSyntax)
-	if err != nil {
-		return nil, err
-	}
-	var pluginInst []plugin.Inst
-	for _, inst := range insts {
-		pluginInst = append(pluginInst, plugin.Inst(inst))
-	}
-	return pluginInst, nil
-}
-
-// internalSymbolizer is a wrapper to map from the pprof external
-// interface to the int interface.
-type internalSymbolizer struct {
-	Symbolizer
-}
-
-func (s *internalSymbolizer) Symbolize(mode string, srcs plugin.MappingSources, prof *profile.Profile) error {
-	isrcs := MappingSources{}
-	for m, s := range srcs {
-		isrcs[m] = s
-	}
-	return s.Symbolizer.Symbolize(mode, isrcs, prof)
+	// Handlers maps from URL paths to the handler to invoke to
+	// serve that path.
+	Handlers map[string]http.Handler
 }

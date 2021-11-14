@@ -284,7 +284,7 @@ func parseJavaLocations(b []byte, locs map[uint64]*Location, p *Profile) error {
 			lineFunc = "STUB"
 		} else {
 			// Treat whole line as the function name. This is used by the
-			// java agent for internal states such as "GC" or "VM".
+			// java agent for int states such as "GC" or "VM".
 			lineFunc = jloc[2]
 		}
 		fn := fns[lineFunc]
