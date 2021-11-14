@@ -17,8 +17,8 @@ package driver
 import (
 	"html/template"
 
-	"github.com/google/pprof/third_party/d3"
-	"github.com/google/pprof/third_party/d3flamegraph"
+	"github.com/codeperfio/pprof/third_party/d3"
+	"github.com/codeperfio/pprof/third_party/d3flamegraph"
 )
 
 // addTemplates adds a set of template definitions to templates.

@@ -25,8 +25,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/pprof/internal/binutils"
-	"github.com/google/pprof/profile"
+	"github.com/codeperfio/pprof/internal/binutils"
+	"github.com/codeperfio/pprof/profile"
 )
 
 func TestWebList(t *testing.T) {

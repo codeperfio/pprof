@@ -20,15 +20,17 @@ package driver
 import (
 	"bytes"
 	"fmt"
+	radix "github.com/mediocregopher/radix/v3"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
-	"github.com/google/pprof/internal/plugin"
-	"github.com/google/pprof/internal/report"
-	"github.com/google/pprof/profile"
-)
+	"github.com/codeperfio/pprof/internal/plugin"
+	"github.com/codeperfio/pprof/internal/report"
+	"github.com/codeperfio/pprof/profile"
+	)
 
 // PProf acquires a profile, and symbolizes it using a profile
 // manager. Then it generates a report formatted according to the
@@ -53,13 +55,45 @@ func PProf(eo *plugin.Options) error {
 		return generateReport(p, cmd, currentConfig(), o)
 	}
 
+	if src.SaveProfile && src.HTTPHostport == "" {
+		fmt.Println("experimenting with saving the profile data")
+		var b bytes.Buffer
+		p.Write(&b)
+		pool, err := radix.NewPool("tcp", "127.0.0.1:6379", 10)
+		if err != nil {
+			// handle error
+		}
+		pool.Do(radix.FlatCmd(nil,"SET", "key", b.Bytes()))
+		fmt.Println(b.Len())
+		if src.HTTPHostport != "" {
+			return serveWebInterface(src.HTTPHostport, p, o, src.HTTPDisableBrowser)
+		}
+	}
+
+
 	if src.HTTPHostport != "" {
+		var b []byte
+		if src.SaveProfile{
+			fmt.Println("experimenting with loading the profile data")
+			pool, err := radix.NewPool("tcp", "127.0.0.1:6379", 10)
+			if err != nil {
+				// handle error
+			}
+			pool.Do(radix.FlatCmd(&b,"GET", "key"))
+			fmt.Println(len(b))
+			prof, err := profile.Parse(bytes.NewReader(b))
+			if err != nil {
+				log.Fatal(err)
+			}
+			return serveWebInterface(src.HTTPHostport, prof, o, src.HTTPDisableBrowser)
+
+		}
 		return serveWebInterface(src.HTTPHostport, p, o, src.HTTPDisableBrowser)
 	}
 	return interactive(p, o)
 }
 
-func generateRawReport(p *profile.Profile, cmd []string, cfg config, o *plugin.Options) (*command, *report.Report, error) {
+func GenerateRawReport(p *profile.Profile, cmd []string, cfg config, o *plugin.Options) (*command, *report.Report, error) {
 	p = p.Copy() // Prevent modification to the incoming profile.
 
 	// Identify units of numeric tags in profile.
@@ -107,13 +141,16 @@ func generateRawReport(p *profile.Profile, cmd []string, cfg config, o *plugin.O
 }
 
 func generateReport(p *profile.Profile, cmd []string, cfg config, o *plugin.Options) error {
-	c, rpt, err := generateRawReport(p, cmd, cfg, o)
+	log.Println(cmd)
+	log.Println(cfg)
+	c, rpt, err := GenerateRawReport(p, cmd, cfg, o)
 	if err != nil {
 		return err
 	}
 
 	// Generate the report.
 	dst := new(bytes.Buffer)
+	log.Println(o.Obj)
 	if err := report.Generate(dst, rpt, o.Obj); err != nil {
 		return err
 	}

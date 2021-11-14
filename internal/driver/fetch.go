@@ -30,9 +30,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/pprof/internal/measurement"
-	"github.com/google/pprof/internal/plugin"
-	"github.com/google/pprof/profile"
+	"github.com/codeperfio/pprof/internal/measurement"
+	"github.com/codeperfio/pprof/internal/plugin"
+	"github.com/codeperfio/pprof/profile"
 )
 
 // fetchProfiles fetches and symbolizes the profiles specified by s.
@@ -46,6 +46,7 @@ func fetchProfiles(s *source, o *plugin.Options) (*profile.Profile, error) {
 			addr:   src,
 			source: s,
 		})
+		o.UI.Print("Appending Source: ", src)
 	}
 
 	bases := make([]profileSource, 0, len(s.Base))
@@ -54,6 +55,7 @@ func fetchProfiles(s *source, o *plugin.Options) (*profile.Profile, error) {
 			addr:   src,
 			source: s,
 		})
+		o.UI.Print("Appending Base: ", src)
 	}
 
 	p, pbase, m, mbase, save, err := grabSourcesAndBases(sources, bases, o.Fetch, o.Obj, o.UI, o.HTTPTransport)
@@ -90,7 +92,7 @@ func fetchProfiles(s *source, o *plugin.Options) (*profile.Profile, error) {
 	}
 
 	// Save a copy of the merged profile if there is at least one remote source.
-	if save {
+	if save || s.SaveProfile {
 		dir, err := setTmpDir(o.UI)
 		if err != nil {
 			return nil, err

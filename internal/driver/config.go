@@ -52,9 +52,9 @@ type config struct {
 	Granularity string `json:"granularity,omitempty"`
 }
 
-// defaultConfig returns the default configuration values; it is unaffected by
+// DefaultConfig returns the default configuration values; it is unaffected by
 // flags and interactive assignments.
-func defaultConfig() config {
+func DefaultConfig() config {
 	return config{
 		Unit:         "minimum",
 		NodeCount:    -1,
@@ -69,7 +69,7 @@ func defaultConfig() config {
 
 // currentConfig holds the current configuration values; it is affected by
 // flags and interactive assignments.
-var currentCfg = defaultConfig()
+var currentCfg = DefaultConfig()
 var currentMu sync.Mutex
 
 func currentConfig() config {
@@ -155,7 +155,7 @@ func init() {
 		"noinlines":            "noinlines",
 	}
 
-	def := defaultConfig()
+	def := DefaultConfig()
 	configFieldMap = map[string]configField{}
 	t := reflect.TypeOf(config{})
 	for i, n := 0, t.NumField(); i < n; i++ {

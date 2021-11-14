@@ -17,6 +17,7 @@ package driver
 import (
 	"bytes"
 	"fmt"
+	"github.com/gorilla/mux"
 	"html/template"
 	"net"
 	"net/http"
@@ -27,10 +28,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/pprof/internal/graph"
-	"github.com/google/pprof/internal/plugin"
-	"github.com/google/pprof/internal/report"
-	"github.com/google/pprof/profile"
+	"github.com/codeperfio/pprof/internal/graph"
+	"github.com/codeperfio/pprof/internal/plugin"
+	"github.com/codeperfio/pprof/internal/report"
+	"github.com/codeperfio/pprof/profile"
 )
 
 // webInterface holds the state needed for serving a browser based interface.
@@ -89,6 +90,65 @@ type webArgs struct {
 	Configs     []configMenuEntry
 }
 
+func ArticleHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "Category: %v\n", vars["category"])
+}
+
+func serveWebInterfaceTmux(hostport string, p *profile.Profile, o *plugin.Options, disableBrowser bool) error {
+	host, port, err := getHostAndPort(hostport)
+	if err != nil {
+		return err
+	}
+	interactiveMode = true
+	ui, err := makeWebInterface(p, o)
+	if err != nil {
+		return err
+	}
+
+	r := mux.NewRouter()
+	r.HandleFunc("/source/{key}", ArticleHandler)
+	http.Handle("/", r)
+
+
+	server := o.HTTPServer
+	if server == nil {
+		server = defaultWebServer
+	}
+
+	args := &plugin.HTTPServerArgs{
+		Hostport: net.JoinHostPort(host, strconv.Itoa(port)),
+		Host:     host,
+		Port:     port,
+		Handlers: map[string]http.Handler{
+			"/":             http.HandlerFunc(ui.dot),
+			"/top":          http.HandlerFunc(ui.top),
+			"/disasm":       http.HandlerFunc(ui.disasm),
+			"/source":       http.HandlerFunc(ui.source),
+			"/peek":         http.HandlerFunc(ui.peek),
+			"/flamegraph":   http.HandlerFunc(ui.flamegraph),
+			"/saveconfig":   http.HandlerFunc(ui.saveConfig),
+			"/deleteconfig": http.HandlerFunc(ui.deleteConfig),
+			"/download": http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.Header().Set("Content-Type", "application/vnd.google.protobuf+gzip")
+				w.Header().Set("Content-Disposition", "attachment;filename=profile.pb.gz")
+				p.Write(w)
+			}),
+		},
+	}
+
+	url := "http://" + args.Hostport
+
+	o.UI.Print("Serving web UI on ", url)
+
+	if o.UI.WantBrowser() && !disableBrowser {
+		go openBrowser(url, o)
+	}
+	return server(args)
+}
+
+
 func serveWebInterface(hostport string, p *profile.Profile, o *plugin.Options, disableBrowser bool) error {
 	host, port, err := getHostAndPort(hostport)
 	if err != nil {
@@ -114,6 +174,7 @@ func serveWebInterface(hostport string, p *profile.Profile, o *plugin.Options, d
 	if server == nil {
 		server = defaultWebServer
 	}
+
 	args := &plugin.HTTPServerArgs{
 		Hostport: net.JoinHostPort(host, strconv.Itoa(port)),
 		Host:     host,
@@ -262,7 +323,7 @@ func (ui *webInterface) makeReport(w http.ResponseWriter, req *http.Request,
 	catcher := &errorCatcher{UI: ui.options.UI}
 	options := *ui.options
 	options.UI = catcher
-	_, rpt, err := generateRawReport(ui.prof, cmd, cfg, &options)
+	_, rpt, err := GenerateRawReport(ui.prof, cmd, cfg, &options)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		ui.options.UI.PrintErr(err)

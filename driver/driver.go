@@ -21,9 +21,9 @@ import (
 	"regexp"
 	"time"
 
-	internaldriver "github.com/google/pprof/internal/driver"
-	"github.com/google/pprof/internal/plugin"
-	"github.com/google/pprof/profile"
+	internaldriver "github.com/codeperfio/pprof/internal/driver"
+	"github.com/codeperfio/pprof/internal/plugin"
+	"github.com/codeperfio/pprof/profile"
 )
 
 // PProf acquires a profile, and symbolizes it using a profile

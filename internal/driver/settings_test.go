@@ -92,7 +92,7 @@ func TestParseConfig(t *testing.T) {
 	if !changed {
 		t.Error("applyConfig returned changed=false after applying non-empty config")
 	}
-	cfg2 := defaultConfig()
+	cfg2 := DefaultConfig()
 	if err := cfg2.applyURL(url.Query()); err != nil {
 		t.Fatalf("fromURL failed: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestParseConfig(t *testing.T) {
 
 // TestDefaultConfig verifies that default config values are omitted from URL.
 func TestDefaultConfig(t *testing.T) {
-	cfg := defaultConfig()
+	cfg := DefaultConfig()
 	url, changed := cfg.makeURL(url.URL{})
 	if changed {
 		t.Error("applyConfig returned changed=true after applying default config")
@@ -120,7 +120,7 @@ func TestConfigMenu(t *testing.T) {
 	// Save some test settings.
 	tmpDir, fname := settingsDirAndFile(t)
 	defer os.RemoveAll(tmpDir)
-	a, b := defaultConfig(), defaultConfig()
+	a, b := DefaultConfig(), DefaultConfig()
 	a.Focus, b.Focus = "foo", "bar"
 	s := &settings{
 		Configs: []namedConfig{

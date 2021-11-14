@@ -17,6 +17,7 @@
 package report
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -27,10 +28,10 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/google/pprof/internal/graph"
-	"github.com/google/pprof/internal/measurement"
-	"github.com/google/pprof/internal/plugin"
-	"github.com/google/pprof/profile"
+	"github.com/codeperfio/pprof/internal/graph"
+	"github.com/codeperfio/pprof/internal/measurement"
+	"github.com/codeperfio/pprof/internal/plugin"
+	"github.com/codeperfio/pprof/profile"
 )
 
 // Output formats.
@@ -48,6 +49,7 @@ const (
 	Traces
 	Tree
 	WebList
+	Json
 )
 
 // Options are the formatting and filtering options used to generate a
@@ -96,6 +98,8 @@ func Generate(w io.Writer, rpt *Report, obj plugin.ObjTool) error {
 		return printTree(w, rpt)
 	case Text:
 		return printText(w, rpt)
+	case Json:
+		return printJson(w, rpt)
 	case Traces:
 		return printTraces(w, rpt)
 	case Raw:
@@ -757,10 +761,19 @@ func printComments(w io.Writer, rpt *Report) error {
 
 // TextItem holds a single text report entry.
 type TextItem struct {
-	Name                  string
-	InlineLabel           string // Not empty if inlined
-	Flat, Cum             int64  // Raw values
-	FlatFormat, CumFormat string // Formatted values
+	Name                  string `json:"name"`
+	InlineLabel           string `json:"inlineLabel"` // Not empty if inlined
+	Flat             int64  `json:"flat"` // Raw values
+	Cum             int64  `json:"cum"` // Raw values
+	FlatFormat string `json:"flatFormat"`  // Formatted values
+	CumFormat string  `json:"cumFormat"`// Formatted values
+}
+
+// TextReport holds a list of text items from the report and a list
+// of labels that describe the report.
+type TextReport struct {
+	Items                  []TextItem `json:"items"`
+	Labels                  []string `json:"labels"`
 }
 
 // TextItems returns a list of text items from the report and a list
@@ -825,6 +838,18 @@ func printText(w io.Writer, rpt *Report) error {
 			item.CumFormat, measurement.Percentage(item.Cum, rpt.total),
 			item.Name, inl)
 	}
+	return nil
+}
+
+// printText prints a flat text report for a profile.
+func printJson(w io.Writer, rpt *Report) error {
+	items, labels := TextItems(rpt)
+	// JSON marshalling flame graph
+	jsonBytes, err := json.Marshal(TextReport{Items: items,Labels: labels})
+	if err != nil {
+		return err
+	}
+	fmt.Fprintln(w, string(jsonBytes))
 	return nil
 }
 

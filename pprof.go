@@ -23,7 +23,7 @@ import (
 	"syscall"
 
 	"github.com/chzyer/readline"
-	"github.com/google/pprof/driver"
+	"github.com/codeperfio/pprof/driver"
 )
 
 func main() {

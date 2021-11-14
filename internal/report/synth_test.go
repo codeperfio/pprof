@@ -3,7 +3,7 @@ package report
 import (
 	"testing"
 
-	"github.com/google/pprof/profile"
+	"github.com/codeperfio/pprof/profile"
 )
 
 func TestSynthAddresses(t *testing.T) {

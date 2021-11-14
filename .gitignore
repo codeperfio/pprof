@@ -6,3 +6,8 @@
 core
 coverage.txt
 pprof
+
+*.json
+*.out
+
+.idea

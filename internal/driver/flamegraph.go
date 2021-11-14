@@ -20,9 +20,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/google/pprof/internal/graph"
-	"github.com/google/pprof/internal/measurement"
-	"github.com/google/pprof/internal/report"
+	"github.com/codeperfio/pprof/internal/graph"
+	"github.com/codeperfio/pprof/internal/measurement"
+	"github.com/codeperfio/pprof/internal/report"
 )
 
 type treeNode struct {
@@ -36,6 +36,27 @@ type treeNode struct {
 
 // flamegraph generates a web page containing a flamegraph.
 func (ui *webInterface) flamegraph(w http.ResponseWriter, req *http.Request) {
+	rpt, errList, g, config, done := reportToDot(w, req, ui)
+	if done {
+		return
+	}
+	nodeArr, rootNode := dotGraphToFlameGraph(g, config)
+
+	// JSON marshalling flame graph
+	b, err := json.Marshal(rootNode)
+	if err != nil {
+		http.Error(w, "error serializing flame graph", http.StatusInternalServerError)
+		ui.options.UI.PrintErr(err)
+		return
+	}
+
+	ui.render(w, req, "flamegraph", rpt, errList, config.Labels, webArgs{
+		FlameGraph: template.JS(b),
+		Nodes:      nodeArr,
+	})
+}
+
+func reportToDot(w http.ResponseWriter, req *http.Request, ui *webInterface) (*report.Report, []string, *graph.Graph, *graph.DotConfig, bool) {
 	// Force the call tree so that the graph is a tree.
 	// Also do not trim the tree so that the flame graph contains all functions.
 	rpt, errList := ui.makeReport(w, req, []string{"svg"}, func(cfg *config) {
@@ -43,11 +64,15 @@ func (ui *webInterface) flamegraph(w http.ResponseWriter, req *http.Request) {
 		cfg.Trim = false
 	})
 	if rpt == nil {
-		return // error already reported
+		return nil, nil, nil, nil, true // error already reported
 	}
 
 	// Generate dot graph.
 	g, config := report.GetDOT(rpt)
+	return rpt, errList, g, config, false
+}
+
+func dotGraphToFlameGraph(g *graph.Graph, config *graph.DotConfig) ([]string, *treeNode) {
 	var nodes []*treeNode
 	nroots := 0
 	rootValue := int64(0)
@@ -90,17 +115,5 @@ func (ui *webInterface) flamegraph(w http.ResponseWriter, req *http.Request) {
 		Percent:   strings.TrimSpace(measurement.Percentage(rootValue, config.Total)),
 		Children:  nodes[0:nroots],
 	}
-
-	// JSON marshalling flame graph
-	b, err := json.Marshal(rootNode)
-	if err != nil {
-		http.Error(w, "error serializing flame graph", http.StatusInternalServerError)
-		ui.options.UI.PrintErr(err)
-		return
-	}
-
-	ui.render(w, req, "flamegraph", rpt, errList, config.Labels, webArgs{
-		FlameGraph: template.JS(b),
-		Nodes:      nodeArr,
-	})
+	return nodeArr, rootNode
 }

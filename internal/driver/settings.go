@@ -81,7 +81,7 @@ type configMenuEntry struct {
 // configMenu returns a list of items to add to a menu in the web UI.
 func configMenu(fname string, url url.URL) []configMenuEntry {
 	// Start with system configs.
-	configs := []namedConfig{{Name: "Default", config: defaultConfig()}}
+	configs := []namedConfig{{Name: "Default", config: DefaultConfig()}}
 	if settings, err := readSettings(fname); err == nil {
 		// Add user configs.
 		configs = append(configs, settings.Configs...)

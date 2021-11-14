@@ -20,8 +20,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/pprof/internal/binutils"
-	"github.com/google/pprof/internal/plugin"
+	"github.com/codeperfio/pprof/internal/binutils"
+	"github.com/codeperfio/pprof/internal/plugin"
 )
 
 type source struct {
@@ -37,8 +37,23 @@ type source struct {
 	Symbolize          string
 	HTTPHostport       string
 	HTTPDisableBrowser bool
+	SaveProfile 	   bool
 	Comment            string
 }
+
+func getEnv(key, fallback string) string {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		value = fallback
+	}
+	return value
+}
+
+var FlagNoDataStore = false
+var DataStoreEndpoint string
+var GhOrg = "HdrHistogram"
+var GhRepo = "hdrhistogram-go"
+var GitHash = "494271c4c016b36c8cee88480288f33b419cf7b0"
 
 // parseFlags parses the command lines through the specified flags package
 // and returns the source of the profile and optionally the command
@@ -64,10 +79,14 @@ func parseFlags(o *plugin.Options) (*source, []string, error) {
 	flagTotalDelay := flag.Bool("total_delay", false, "Display total delay at each region")
 	flagContentions := flag.Bool("contentions", false, "Display number of delays at each region")
 	flagMeanDelay := flag.Bool("mean_delay", false, "Display mean delay at each region")
+	flagSaveProfile := flag.Bool("save", false, "Save a copy of the merged profile. If there is at least one remote source this is enforced.")
 	flagTools := flag.String("tools", os.Getenv("PPROF_TOOLS"), "Path for object tool pathnames")
 
 	flagHTTP := flag.String("http", "", "Present interactive web UI at the specified http host:port")
 	flagNoBrowser := flag.Bool("no_browser", false, "Skip opening a browswer for the interactive web UI")
+
+	ds := flag.String("datastore_endpoint", getEnv("CODEPERF_DATASTORE", "localhost:5000"), "Push the at the specified http host:port")
+	DataStoreEndpoint = *ds
 
 	// Flags that set configuration properties.
 	cfg := currentConfig()
@@ -148,6 +167,7 @@ func parseFlags(o *plugin.Options) (*source, []string, error) {
 		Symbolize:          *flagSymbolize,
 		HTTPHostport:       *flagHTTP,
 		HTTPDisableBrowser: *flagNoBrowser,
+		SaveProfile: 		*flagSaveProfile,
 		Comment:            *flagAddComment,
 	}
 
@@ -347,6 +367,8 @@ var usageMsgVars = "\n\n" +
 	"                      Host is optional and 'localhost' by default.\n" +
 	"                      Port is optional and a randomly available port by default.\n" +
 	"   -no_browser        Skip opening a browser for the interactive web UI.\n" +
+	"   -save              Save a copy of the merged profile.\n" +
+	"                      If there is at least one remote source this is enforced.\n" +
 	"   -tools             Search path for object tools\n" +
 	"\n" +
 	"  Legacy convenience options:\n" +
