@@ -356,19 +356,19 @@ table tr td {
     </div>
   </div>
 
-  <div id="config" class="menu-item">
+  <div id="PprofConfig" class="menu-item">
     <div class="menu-name">
       Config
       <i class="downArrow"></i>
     </div>
     <div class="submenu">
-      <a title="{{.Help.save_config}}" id="save-config">Save as ...</a>
+      <a title="{{.Help.save_config}}" id="save-PprofConfig">Save as ...</a>
       <hr>
       {{range .Configs}}
         <a href="{{.URL}}">
           {{if .Current}}<span class="menu-check-mark">✓</span>{{end}}
           {{.Name}}
-          {{if .UserConfig}}<span class="menu-delete-btn" data-config={{.Name}}>🗙</span>{{end}}
+          {{if .UserConfig}}<span class="menu-delete-btn" data-PprofConfig={{.Name}}>🗙</span>{{end}}
         </a>
       {{end}}
     </div>
@@ -396,10 +396,10 @@ table tr td {
 
 <div class="dialog" id="save-dialog">
   <div class="dialog-header">Save options as</div>
-  <datalist id="config-list">
+  <datalist id="PprofConfig-list">
     {{range .Configs}}{{if .UserConfig}}<option value="{{.Name}}" />{{end}}{{end}}
   </datalist>
-  <input id="save-name" type="text" list="config-list" placeholder="New config" />
+  <input id="save-name" type="text" list="PprofConfig-list" placeholder="New PprofConfig" />
   <div class="dialog-footer">
     <span class="dialog-error" id="save-error"></span>
     <button id="save-cancel">Cancel</button>
@@ -408,7 +408,7 @@ table tr td {
 </div>
 
 <div class="dialog" id="delete-dialog">
-  <div class="dialog-header" id="delete-dialog-title">Delete config</div>
+  <div class="dialog-header" id="delete-dialog-title">Delete PprofConfig</div>
   <div id="delete-prompt"></div>
   <div class="dialog-footer">
     <span class="dialog-error" id="delete-error"></span>
@@ -749,27 +749,27 @@ function initConfigManager() {
     showDialog(null);
   }
 
-  // Show dialog for saving the current config.
+  // Show dialog for saving the current PprofConfig.
   function showSaveDialog(e) {
     saveError.innerText = '';
     showDialog(saveDialog);
     saveInput.focus();
   }
 
-  // Commit save config.
+  // Commit save PprofConfig.
   function commitSave(e) {
     const name = saveInput.value;
     const url = new URL(document.URL);
     // Set path relative to existing path.
     url.pathname = new URL('./saveconfig', document.URL).pathname;
-    url.searchParams.set('config', name);
+    url.searchParams.set('PprofConfig', name);
     saveError.innerText = '';
     sendURL('POST', url, (ok) => {
       if (!ok) {
         saveError.innerText = 'Save failed';
       } else {
         showDialog(null);
-        location.reload();  // Reload to show updated config menu
+        location.reload();  // Reload to show updated PprofConfig menu
       }
     });
   }
@@ -780,17 +780,17 @@ function initConfigManager() {
 
   function deleteConfig(e, elem) {
     e.preventDefault();
-    const config = elem.dataset.config;
-    delPrompt.innerText = 'Delete ' + config + '?';
+    const PprofConfig = elem.dataset.PprofConfig;
+    delPrompt.innerText = 'Delete ' + PprofConfig + '?';
     currentDeleteTarget = elem;
     showDialog(delDialog);
   }
 
   function commitDelete(e, elem) {
     if (!currentDeleteTarget) return;
-    const config = currentDeleteTarget.dataset.config;
+    const PprofConfig = currentDeleteTarget.dataset.PprofConfig;
     const url = new URL('./deleteconfig', document.URL);
-    url.searchParams.set('config', config);
+    url.searchParams.set('PprofConfig', PprofConfig);
     delError.innerText = '';
     sendURL('DELETE', url, (ok) => {
       if (!ok) {
@@ -798,7 +798,7 @@ function initConfigManager() {
         return;
       }
       showDialog(null);
-      // Remove menu entry for this config.
+      // Remove menu entry for this PprofConfig.
       if (currentDeleteTarget && currentDeleteTarget.parentElement) {
         currentDeleteTarget.parentElement.remove();
       }
@@ -815,7 +815,7 @@ function initConfigManager() {
     }
   }
 
-  bind('click', elem('save-config'), showSaveDialog);
+  bind('click', elem('save-PprofConfig'), showSaveDialog);
   bind('click', elem('save-cancel'), cancelDialog);
   bind('click', elem('save-confirm'), commitSave);
   bind('keydown', saveInput, handleSaveInputKey);
@@ -823,7 +823,7 @@ function initConfigManager() {
   bind('click', elem('delete-cancel'), cancelDialog);
   bind('click', elem('delete-confirm'), commitDelete);
 
-  // Activate deletion button for all config entries in menu.
+  // Activate deletion button for all PprofConfig entries in menu.
   for (const del of Array.from(document.getElementsByClassName('menu-delete-btn'))) {
     bind('click', del, (e) => {
       deleteConfig(e, del);

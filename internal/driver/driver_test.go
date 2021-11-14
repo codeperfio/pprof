@@ -106,7 +106,7 @@ func TestParse(t *testing.T) {
 	defer setCurrentConfig(baseConfig)
 	for _, tc := range testcase {
 		t.Run(tc.flags+":"+tc.source, func(t *testing.T) {
-			// Reset config before processing
+			// Reset PprofConfig before processing
 			setCurrentConfig(baseConfig)
 
 			testUI := &proftest.TestUI{T: t, AllowRx: "Generating report in|Ignoring local file|expression matched no samples|Interpreted .* as range, not regexp"}
@@ -141,7 +141,7 @@ func TestParse(t *testing.T) {
 			if err := PProf(o1); err != nil {
 				t.Fatalf("%s %q:  %v", tc.source, tc.flags, err)
 			}
-			// Reset config after the proto invocation
+			// Reset PprofConfig after the proto invocation
 			setCurrentConfig(baseConfig)
 
 			// Read the profile from the encoded protobuf

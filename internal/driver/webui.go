@@ -308,9 +308,9 @@ func openBrowser(url string, o *plugin.Options) {
 }
 
 // makeReport generates a report for the specified command.
-// If configEditor is not null, it is used to edit the config used for the report.
+// If configEditor is not null, it is used to edit the PprofConfig used for the report.
 func (ui *webInterface) makeReport(w http.ResponseWriter, req *http.Request,
-	cmd []string, configEditor func(*config)) (*report.Report, []string) {
+	cmd []string, configEditor func(*PprofConfig)) (*report.Report, []string) {
 	cfg := currentConfig()
 	if err := cfg.applyURL(req.URL.Query()); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -409,7 +409,7 @@ func dotToSvg(dot []byte) ([]byte, error) {
 }
 
 func (ui *webInterface) top(w http.ResponseWriter, req *http.Request) {
-	rpt, errList := ui.makeReport(w, req, []string{"top"}, func(cfg *config) {
+	rpt, errList := ui.makeReport(w, req, []string{"top"}, func(cfg *PprofConfig) {
 		cfg.NodeCount = 500
 	})
 	if rpt == nil {
@@ -475,7 +475,7 @@ func (ui *webInterface) source(w http.ResponseWriter, req *http.Request) {
 // peek generates a web page listing callers/callers.
 func (ui *webInterface) peek(w http.ResponseWriter, req *http.Request) {
 	args := []string{"peek", req.URL.Query().Get("f")}
-	rpt, errList := ui.makeReport(w, req, args, func(cfg *config) {
+	rpt, errList := ui.makeReport(w, req, args, func(cfg *PprofConfig) {
 		cfg.Granularity = "lines"
 	})
 	if rpt == nil {
@@ -506,7 +506,7 @@ func (ui *webInterface) saveConfig(w http.ResponseWriter, req *http.Request) {
 
 // deleteConfig deletes a configuration.
 func (ui *webInterface) deleteConfig(w http.ResponseWriter, req *http.Request) {
-	name := req.URL.Query().Get("config")
+	name := req.URL.Query().Get("PprofConfig")
 	if err := removeConfig(ui.settingsFile, name); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		ui.options.UI.PrintErr(err)

@@ -9,10 +9,10 @@ import (
 	"sync"
 )
 
-// config holds settings for a single named config.
+// PprofConfig holds settings for a single named PprofConfig.
 // The JSON tag name for a field is used both for JSON encoding and as
 // a named variable.
-type config struct {
+type PprofConfig struct {
 	// Filename for file-based output formats, stdout by default.
 	Output string `json:"-"`
 
@@ -54,8 +54,8 @@ type config struct {
 
 // DefaultConfig returns the default configuration values; it is unaffected by
 // flags and interactive assignments.
-func DefaultConfig() config {
-	return config{
+func DefaultConfig() PprofConfig {
+	return PprofConfig{
 		Unit:         "minimum",
 		NodeCount:    -1,
 		NodeFraction: 0.005,
@@ -72,13 +72,13 @@ func DefaultConfig() config {
 var currentCfg = DefaultConfig()
 var currentMu sync.Mutex
 
-func currentConfig() config {
+func currentConfig() PprofConfig {
 	currentMu.Lock()
 	defer currentMu.Unlock()
 	return currentCfg
 }
 
-func setCurrentConfig(cfg config) {
+func setCurrentConfig(cfg PprofConfig) {
 	currentMu.Lock()
 	defer currentMu.Unlock()
 	currentCfg = cfg
@@ -89,15 +89,15 @@ type configField struct {
 	name         string              // JSON field name/key in variables
 	urlparam     string              // URL parameter name
 	saved        bool                // Is field saved in settings?
-	field        reflect.StructField // Field in config
+	field        reflect.StructField // Field in PprofConfig
 	choices      []string            // Name Of variables in group
 	defaultValue string              // Default value for this field.
 }
 
 var (
-	configFields []configField // Precomputed metadata per config field
+	configFields []configField // Precomputed metadata per PprofConfig field
 
-	// configFieldMap holds an entry for every config field as well as an
+	// configFieldMap holds an entry for every PprofConfig field as well as an
 	// entry for every valid choice for a multi-choice field.
 	configFieldMap map[string]configField
 )
@@ -116,15 +116,15 @@ func init() {
 		"DivideBy":   "divide_by",
 	}
 
-	// choices holds the list of allowed values for config fields that can
+	// choices holds the list of allowed values for PprofConfig fields that can
 	// take on one of a bounded set of values.
 	choices := map[string][]string{
 		"sort":        {"cum", "flat"},
 		"granularity": {"functions", "filefunctions", "files", "lines", "addresses"},
 	}
 
-	// urlparam holds the mapping from a config field name to the URL
-	// parameter used to hold that config field. If no entry is present for
+	// urlparam holds the mapping from a PprofConfig field name to the URL
+	// parameter used to hold that PprofConfig field. If no entry is present for
 	// a name, the corresponding field is not saved in URLs.
 	urlparam := map[string]string{
 		"drop_negative":        "dropneg",
@@ -157,7 +157,7 @@ func init() {
 
 	def := DefaultConfig()
 	configFieldMap = map[string]configField{}
-	t := reflect.TypeOf(config{})
+	t := reflect.TypeOf(PprofConfig{})
 	for i, n := 0, t.NumField(); i < n; i++ {
 		field := t.Field(i)
 		js := strings.Split(field.Tag.Get("json"), ",")
@@ -190,7 +190,7 @@ func init() {
 }
 
 // fieldPtr returns a pointer to the field identified by f in *cfg.
-func (cfg *config) fieldPtr(f configField) interface{} {
+func (cfg *PprofConfig) fieldPtr(f configField) interface{} {
 	// reflect.ValueOf: converts to reflect.Value
 	// Elem: dereferences cfg to make *cfg
 	// FieldByIndex: fetches the field
@@ -200,7 +200,7 @@ func (cfg *config) fieldPtr(f configField) interface{} {
 }
 
 // get returns the value of field f in cfg.
-func (cfg *config) get(f configField) string {
+func (cfg *PprofConfig) get(f configField) string {
 	switch ptr := cfg.fieldPtr(f).(type) {
 	case *string:
 		return *ptr
@@ -211,11 +211,11 @@ func (cfg *config) get(f configField) string {
 	case *bool:
 		return fmt.Sprint(*ptr)
 	}
-	panic(fmt.Sprintf("unsupported config field type %v", f.field.Type))
+	panic(fmt.Sprintf("unsupported PprofConfig field type %v", f.field.Type))
 }
 
 // set sets the value of field f in cfg to value.
-func (cfg *config) set(f configField, value string) error {
+func (cfg *PprofConfig) set(f configField, value string) error {
 	switch ptr := cfg.fieldPtr(f).(type) {
 	case *string:
 		if len(f.choices) > 0 {
@@ -248,20 +248,20 @@ func (cfg *config) set(f configField, value string) error {
 		}
 		*ptr = v
 	default:
-		panic(fmt.Sprintf("unsupported config field type %v", f.field.Type))
+		panic(fmt.Sprintf("unsupported PprofConfig field type %v", f.field.Type))
 	}
 	return nil
 }
 
-// isConfigurable returns true if name is either the name of a config field, or
-// a valid value for a multi-choice config field.
+// isConfigurable returns true if name is either the name of a PprofConfig field, or
+// a valid value for a multi-choice PprofConfig field.
 func isConfigurable(name string) bool {
 	_, ok := configFieldMap[name]
 	return ok
 }
 
-// isBoolConfig returns true if name is either name of a boolean config field,
-// or a valid value for a multi-choice config field.
+// isBoolConfig returns true if name is either name of a boolean PprofConfig field,
+// or a valid value for a multi-choice PprofConfig field.
 func isBoolConfig(name string) bool {
 	f, ok := configFieldMap[name]
 	if !ok {
@@ -270,7 +270,7 @@ func isBoolConfig(name string) bool {
 	if name != f.name {
 		return true // name must be one possible value for the field
 	}
-	var cfg config
+	var cfg PprofConfig
 	_, ok = cfg.fieldPtr(f).(*bool)
 	return ok
 }
@@ -286,14 +286,14 @@ func completeConfig(prefix string) []string {
 	return result
 }
 
-// configure stores the name=value mapping into the current config, correctly
+// configure stores the name=value mapping into the current PprofConfig, correctly
 // handling the case when name identifies a particular choice in a field.
 func configure(name, value string) error {
 	currentMu.Lock()
 	defer currentMu.Unlock()
 	f, ok := configFieldMap[name]
 	if !ok {
-		return fmt.Errorf("unknown config field %q", name)
+		return fmt.Errorf("unknown PprofConfig field %q", name)
 	}
 	if f.name == name {
 		return currentCfg.set(f, value)
@@ -303,12 +303,12 @@ func configure(name, value string) error {
 	if v, err := strconv.ParseBool(value); v && err == nil {
 		return currentCfg.set(f, name)
 	}
-	return fmt.Errorf("unknown config field %q", name)
+	return fmt.Errorf("unknown PprofConfig field %q", name)
 }
 
 // resetTransient sets all transient fields in *cfg to their currently
 // configured values.
-func (cfg *config) resetTransient() {
+func (cfg *PprofConfig) resetTransient() {
 	current := currentConfig()
 	cfg.Output = current.Output
 	cfg.SourcePath = current.SourcePath
@@ -318,7 +318,7 @@ func (cfg *config) resetTransient() {
 }
 
 // applyURL updates *cfg based on params.
-func (cfg *config) applyURL(params url.Values) error {
+func (cfg *PprofConfig) applyURL(params url.Values) error {
 	for _, f := range configFields {
 		var value string
 		if f.urlparam != "" {
@@ -328,15 +328,15 @@ func (cfg *config) applyURL(params url.Values) error {
 			continue
 		}
 		if err := cfg.set(f, value); err != nil {
-			return fmt.Errorf("error setting config field %s: %v", f.name, err)
+			return fmt.Errorf("error setting PprofConfig field %s: %v", f.name, err)
 		}
 	}
 	return nil
 }
 
-// makeURL returns a URL based on initialURL that contains the config contents
+// makeURL returns a URL based on initialURL that contains the PprofConfig contents
 // as parameters.  The second result is true iff a parameter value was changed.
-func (cfg *config) makeURL(initialURL url.URL) (url.URL, bool) {
+func (cfg *PprofConfig) makeURL(initialURL url.URL) (url.URL, bool) {
 	q := initialURL.Query()
 	changed := false
 	for _, f := range configFields {

@@ -59,7 +59,7 @@ func (ui *webInterface) flamegraph(w http.ResponseWriter, req *http.Request) {
 func reportToDot(w http.ResponseWriter, req *http.Request, ui *webInterface) (*report.Report, []string, *graph.Graph, *graph.DotConfig, bool) {
 	// Force the call tree so that the graph is a tree.
 	// Also do not trim the tree so that the flame graph contains all functions.
-	rpt, errList := ui.makeReport(w, req, []string{"svg"}, func(cfg *config) {
+	rpt, errList := ui.makeReport(w, req, []string{"svg"}, func(cfg *PprofConfig) {
 		cfg.CallTree = true
 		cfg.Trim = false
 	})

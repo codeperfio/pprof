@@ -221,8 +221,8 @@ func dropEmpty(list []*string) []string {
 // fields and returns a function which can be called after flags have
 // been parsed to copy any flags specified on the command line to
 // *cfg.
-func installConfigFlags(flag plugin.FlagSet, cfg *config) func() error {
-	// List of functions for setting the different parts of a config.
+func installConfigFlags(flag plugin.FlagSet, cfg *PprofConfig) func() error {
+	// List of functions for setting the different parts of a PprofConfig.
 	var setters []func()
 	var err error // Holds any errors encountered while running setters.
 

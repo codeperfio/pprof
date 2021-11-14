@@ -93,7 +93,7 @@ func PProf(eo *plugin.Options) error {
 	return interactive(p, o)
 }
 
-func GenerateRawReport(p *profile.Profile, cmd []string, cfg config, o *plugin.Options) (*command, *report.Report, error) {
+func GenerateRawReport(p *profile.Profile, cmd []string, cfg PprofConfig, o *plugin.Options) (*command, *report.Report, error) {
 	p = p.Copy() // Prevent modification to the incoming profile.
 
 	// Identify units of numeric tags in profile.
@@ -140,7 +140,7 @@ func GenerateRawReport(p *profile.Profile, cmd []string, cfg config, o *plugin.O
 	return c, rpt, nil
 }
 
-func generateReport(p *profile.Profile, cmd []string, cfg config, o *plugin.Options) error {
+func generateReport(p *profile.Profile, cmd []string, cfg PprofConfig, o *plugin.Options) error {
 	log.Println(cmd)
 	log.Println(cfg)
 	c, rpt, err := GenerateRawReport(p, cmd, cfg, o)
@@ -188,7 +188,7 @@ func generateReport(p *profile.Profile, cmd []string, cfg config, o *plugin.Opti
 	return out.Close()
 }
 
-func applyCommandOverrides(cmd string, outputFormat int, cfg config) config {
+func applyCommandOverrides(cmd string, outputFormat int, cfg PprofConfig) PprofConfig {
 	// Some report types override the trim flag to false below. This is to make
 	// sure the default heuristics of excluding insignificant nodes and edges
 	// from the call graph do not apply. One example where it is important is
@@ -245,7 +245,7 @@ func applyCommandOverrides(cmd string, outputFormat int, cfg config) config {
 	return cfg
 }
 
-func aggregate(prof *profile.Profile, cfg config) error {
+func aggregate(prof *profile.Profile, cfg PprofConfig) error {
 	var function, filename, linenumber, address bool
 	inlines := !cfg.NoInlines
 	switch cfg.Granularity {
@@ -274,7 +274,7 @@ func aggregate(prof *profile.Profile, cfg config) error {
 	return prof.Aggregate(inlines, function, filename, linenumber, address)
 }
 
-func reportOptions(p *profile.Profile, numLabelUnits map[string]string, cfg config) (*report.Options, error) {
+func reportOptions(p *profile.Profile, numLabelUnits map[string]string, cfg PprofConfig) (*report.Options, error) {
 	si, mean := cfg.SampleIndex, cfg.Mean
 	value, meanDiv, sample, err := sampleFormat(p, si, mean)
 	if err != nil {

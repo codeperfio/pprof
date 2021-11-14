@@ -131,7 +131,7 @@ func makeShortcuts(input []string, seed int) (shortcuts, []string) {
 	return s, output
 }
 
-func checkValue(p *profile.Profile, cmd []string, cfg config, o *plugin.Options) error {
+func checkValue(p *profile.Profile, cmd []string, cfg PprofConfig, o *plugin.Options) error {
 	if len(cmd) != 2 {
 		return fmt.Errorf("expected len(cmd)==2, got %v", cmd)
 	}

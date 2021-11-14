@@ -216,7 +216,7 @@ func printCurrentOptions(p *profile.Profile, ui plugin.UI) {
 
 // parseCommandLine parses a command and returns the pprof command to
 // execute and the configuration to use for the report.
-func parseCommandLine(input []string) ([]string, config, error) {
+func parseCommandLine(input []string) ([]string, PprofConfig, error) {
 	cmd, args := input[:1], input[1:]
 	name := cmd[0]
 
@@ -235,20 +235,20 @@ func parseCommandLine(input []string) ([]string, config, error) {
 			if len(args) > 0 {
 				value = args[0]
 			}
-			return nil, config{}, fmt.Errorf("did you mean: %s=%s", name, value)
+			return nil, PprofConfig{}, fmt.Errorf("did you mean: %s=%s", name, value)
 		}
-		return nil, config{}, fmt.Errorf("unrecognized command: %q", name)
+		return nil, PprofConfig{}, fmt.Errorf("unrecognized command: %q", name)
 	}
 
 	if c.hasParam {
 		if len(args) == 0 {
-			return nil, config{}, fmt.Errorf("command %s requires an argument", name)
+			return nil, PprofConfig{}, fmt.Errorf("command %s requires an argument", name)
 		}
 		cmd = append(cmd, args[0])
 		args = args[1:]
 	}
 
-	// Copy config since options set in the command line should not persist.
+	// Copy PprofConfig since options set in the command line should not persist.
 	vcopy := currentConfig()
 
 	var focus, ignore string
@@ -264,7 +264,7 @@ func parseCommandLine(input []string) ([]string, config, error) {
 			if outputFile == "" {
 				i++
 				if i >= len(args) {
-					return nil, config{}, fmt.Errorf("unexpected end of line after >")
+					return nil, PprofConfig{}, fmt.Errorf("unexpected end of line after >")
 				}
 				outputFile = args[i]
 			}

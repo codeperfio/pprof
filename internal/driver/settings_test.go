@@ -32,7 +32,7 @@ func TestSettings(t *testing.T) {
 	}
 	s.Configs = append(s.Configs, namedConfig{
 		Name: "Foo",
-		config: config{
+		PprofConfig: PprofConfig{
 			Focus: "focus",
 			// Ensure that transient fields are not saved/restored.
 			Output:     "output",
@@ -58,7 +58,7 @@ func TestSettings(t *testing.T) {
 
 func TestParseConfig(t *testing.T) {
 	// Use all the fields to check they are saved/restored from URL.
-	cfg := config{
+	cfg := PprofConfig{
 		Output:              "",
 		DropNegative:        true,
 		CallTree:            true,
@@ -90,26 +90,26 @@ func TestParseConfig(t *testing.T) {
 	}
 	url, changed := cfg.makeURL(url.URL{})
 	if !changed {
-		t.Error("applyConfig returned changed=false after applying non-empty config")
+		t.Error("applyConfig returned changed=false after applying non-empty PprofConfig")
 	}
 	cfg2 := DefaultConfig()
 	if err := cfg2.applyURL(url.Query()); err != nil {
 		t.Fatalf("fromURL failed: %v", err)
 	}
 	if !reflect.DeepEqual(cfg, cfg2) {
-		t.Fatalf("parsed config = %+v; expected match with %+v", cfg2, cfg)
+		t.Fatalf("parsed PprofConfig = %+v; expected match with %+v", cfg2, cfg)
 	}
 	if url2, changed := cfg.makeURL(url); changed {
-		t.Errorf("ApplyConfig returned changed=true after applying same config (%q instead of expected %q", url2.String(), url.String())
+		t.Errorf("ApplyConfig returned changed=true after applying same PprofConfig (%q instead of expected %q", url2.String(), url.String())
 	}
 }
 
-// TestDefaultConfig verifies that default config values are omitted from URL.
+// TestDefaultConfig verifies that default PprofConfig values are omitted from URL.
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 	url, changed := cfg.makeURL(url.URL{})
 	if changed {
-		t.Error("applyConfig returned changed=true after applying default config")
+		t.Error("applyConfig returned changed=true after applying default PprofConfig")
 	}
 	if url.String() != "" {
 		t.Errorf("applyConfig returned %q; expecting %q", url.String(), "")
@@ -124,8 +124,8 @@ func TestConfigMenu(t *testing.T) {
 	a.Focus, b.Focus = "foo", "bar"
 	s := &settings{
 		Configs: []namedConfig{
-			{Name: "A", config: a},
-			{Name: "B", config: b},
+			{Name: "A", PprofConfig: a},
+			{Name: "B", PprofConfig: b},
 		},
 	}
 	if err := writeSettings(fname, s); err != nil {
@@ -160,16 +160,16 @@ func TestEditConfig(t *testing.T) {
 	}
 	for _, c := range []testCase{
 		// Create setting c1
-		{false, "/?config=c1&f=foo", []testConfig{
+		{false, "/?PprofConfig=c1&f=foo", []testConfig{
 			{"c1", "foo", ""},
 		}},
 		// Create setting c2
-		{false, "/?config=c2&h=bar", []testConfig{
+		{false, "/?PprofConfig=c2&h=bar", []testConfig{
 			{"c1", "foo", ""},
 			{"c2", "", "bar"},
 		}},
 		// Overwrite c1
-		{false, "/?config=c1&f=baz", []testConfig{
+		{false, "/?PprofConfig=c1&f=baz", []testConfig{
 			{"c1", "baz", ""},
 			{"c2", "", "bar"},
 		}},
@@ -180,7 +180,7 @@ func TestEditConfig(t *testing.T) {
 	} {
 		if c.remove {
 			if err := removeConfig(fname, c.request); err != nil {
-				t.Errorf("error removing config %s: %v", c.request, err)
+				t.Errorf("error removing PprofConfig %s: %v", c.request, err)
 				continue
 			}
 		} else {

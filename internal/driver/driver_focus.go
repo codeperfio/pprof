@@ -28,7 +28,7 @@ import (
 var tagFilterRangeRx = regexp.MustCompile("([+-]?[[:digit:]]+)([[:alpha:]]+)?")
 
 // applyFocus filters samples based on the focus/ignore options
-func applyFocus(prof *profile.Profile, numLabelUnits map[string]string, cfg config, ui plugin.UI) error {
+func applyFocus(prof *profile.Profile, numLabelUnits map[string]string, cfg PprofConfig, ui plugin.UI) error {
 	focus, err := compileRegexOption("focus", cfg.Focus, nil)
 	ignore, err := compileRegexOption("ignore", cfg.Ignore, err)
 	hide, err := compileRegexOption("hide", cfg.Hide, err)

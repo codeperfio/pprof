@@ -15,10 +15,10 @@ type settings struct {
 	Configs []namedConfig `json:"configs"`
 }
 
-// namedConfig associates a name with a config.
+// namedConfig associates a name with a PprofConfig.
 type namedConfig struct {
 	Name string `json:"name"`
-	config
+	PprofConfig
 }
 
 // settingsFileName returns the name of the file where settings should be saved.
@@ -70,18 +70,18 @@ func writeSettings(fname string, settings *settings) error {
 	return nil
 }
 
-// configMenuEntry holds information for a single config menu entry.
+// configMenuEntry holds information for a single PprofConfig menu entry.
 type configMenuEntry struct {
 	Name       string
 	URL        string
-	Current    bool // Is this the currently selected config?
-	UserConfig bool // Is this a user-provided config?
+	Current    bool // Is this the currently selected PprofConfig?
+	UserConfig bool // Is this a user-provided PprofConfig?
 }
 
 // configMenu returns a list of items to add to a menu in the web UI.
 func configMenu(fname string, url url.URL) []configMenuEntry {
 	// Start with system configs.
-	configs := []namedConfig{{Name: "Default", config: DefaultConfig()}}
+	configs := []namedConfig{{Name: "Default", PprofConfig: DefaultConfig()}}
 	if settings, err := readSettings(fname); err == nil {
 		// Add user configs.
 		configs = append(configs, settings.Configs...)
@@ -91,7 +91,7 @@ func configMenu(fname string, url url.URL) []configMenuEntry {
 	result := make([]configMenuEntry, len(configs))
 	lastMatch := -1
 	for i, cfg := range configs {
-		dst, changed := cfg.config.makeURL(url)
+		dst, changed := cfg.PprofConfig.makeURL(url)
 		if !changed {
 			lastMatch = i
 		}
@@ -101,7 +101,7 @@ func configMenu(fname string, url url.URL) []configMenuEntry {
 			UserConfig: (i != 0),
 		}
 	}
-	// Mark the last matching config as currennt
+	// Mark the last matching PprofConfig as currennt
 	if lastMatch >= 0 {
 		result[lastMatch].Current = true
 	}
@@ -120,12 +120,12 @@ func editSettings(fname string, fn func(s *settings) error) error {
 	return writeSettings(fname, settings)
 }
 
-// setConfig saves the config specified in request to fname.
+// setConfig saves the PprofConfig specified in request to fname.
 func setConfig(fname string, request url.URL) error {
 	q := request.Query()
-	name := q.Get("config")
+	name := q.Get("PprofConfig")
 	if name == "" {
-		return fmt.Errorf("invalid config name")
+		return fmt.Errorf("invalid PprofConfig name")
 	}
 	cfg := currentConfig()
 	if err := cfg.applyURL(q); err != nil {
@@ -134,16 +134,16 @@ func setConfig(fname string, request url.URL) error {
 	return editSettings(fname, func(s *settings) error {
 		for i, c := range s.Configs {
 			if c.Name == name {
-				s.Configs[i].config = cfg
+				s.Configs[i].PprofConfig = cfg
 				return nil
 			}
 		}
-		s.Configs = append(s.Configs, namedConfig{Name: name, config: cfg})
+		s.Configs = append(s.Configs, namedConfig{Name: name, PprofConfig: cfg})
 		return nil
 	})
 }
 
-// removeConfig removes config from fname.
+// removeConfig removes PprofConfig from fname.
 func removeConfig(fname, config string) error {
 	return editSettings(fname, func(s *settings) error {
 		for i, c := range s.Configs {
@@ -152,6 +152,6 @@ func removeConfig(fname, config string) error {
 				return nil
 			}
 		}
-		return fmt.Errorf("config %s not found", config)
+		return fmt.Errorf("PprofConfig %s not found", config)
 	})
 }
